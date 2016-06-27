@@ -23,7 +23,7 @@ db.schema.hasTable('urls').then(function(exists) {
       link.integer('visits');
       link.timestamps();
     }).then(function (table) {
-      console.log('Created Table', table);
+      console.log('Created Url Table', table);
     });
   }
 });
@@ -33,9 +33,10 @@ db.schema.hasTable('clicks').then(function(exists) {
     db.schema.createTable('clicks', function (click) {
       click.increments('id').primary();
       click.integer('link_id');
+      click.integer('user_id');
       click.timestamps();
     }).then(function (table) {
-      console.log('Created Table', table);
+      console.log('Created Click Table', table);
     });
   }
 });
@@ -46,3 +47,20 @@ db.schema.hasTable('clicks').then(function(exists) {
 
 var Bookshelf = require('bookshelf')(db);
 module.exports = Bookshelf;
+
+
+db.schema.hasTable('users').then(function(exists) {
+  if (!exists) {
+    db.schema.createTable('users', function (data) {
+      data.increments('id').primary();
+      data.string('username', 255);
+      data.string('password', 255);
+      data.string('session', 100);
+//      link.timestamps();
+    }).then(function (table) {
+      console.log('Created Users Table', table);
+    });
+  }
+});
+
+

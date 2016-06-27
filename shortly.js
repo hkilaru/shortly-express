@@ -3,8 +3,9 @@ var util = require('./lib/utility');
 var partials = require('express-partials');
 var bodyParser = require('body-parser');
 var morgan = require('morgan');
+var bcrypt = require('bcrypt-nodejs');
 
-
+var session = require('express-session');
 var db = require('./app/config');
 var Users = require('./app/collections/users');
 var User = require('./app/models/user');
@@ -25,24 +26,66 @@ app.use(morgan('dev'));
 app.use(express.static(__dirname + '/public'));
 
 
-app.get('/', 
+app.get('/', function (req,res,next){
+//   if (){
+    //check user cookies
+    //if sessionID in cookie is valid
+      //redirect to index.html
+
+},
+function(req, res) {    //redirect to login.html if invalid
+ res.render('login');
+});
+
+app.get('/create',
 function(req, res) {
   res.render('index');
 });
 
-app.get('/create', 
-function(req, res) {
-  res.render('index');
-});
-
-app.get('/links', 
+app.get('/links',
 function(req, res) {
   Links.reset().fetch().then(function(links) {
     res.send(200, links.models);
   });
 });
+app.post('/login', function(req, res){
+  var username = req.body.username;
+  bcrypt.hash(req.body.password, null, null, function(err,hPass){
+    new User({username: username, password: hPass}).fetch().then(function(found) {
+    if (found) {
+      console.log("user found", hPass);
+      res.render('index');
+      //create sessionID and cookie
+    } else {
+      res.render('signup');
+    }
+  });
+ });
+});
+                //process login, get session cookie, check if existing session..
+                     //check if existing user, redirect to sign-up or authenticate
+                        //capture username from req
+                        //convert password into hash and query user table with this value
 
-app.post('/links', 
+
+app.post('/signup', function(req, res){
+ new User({username: req.user.username, password: req.user.password}).fetch().then(function(found) {
+    if (found) {
+      res.render('login');
+    } else {
+        var user = new User({
+          username: req.user.username,
+          password: req.user.password,
+        });
+        user.save().then(function(newUser) {
+          Users.add(newUser);
+          res.render('index');
+        });
+      };
+  })
+});
+
+app.post('/links',
 function(req, res) {
   var uri = req.body.url;
 
