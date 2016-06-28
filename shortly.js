@@ -24,17 +24,25 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(morgan('dev'));
 app.use(express.static(__dirname + '/public'));
-
+app.use(session({secret:'HarishRebecca'}));
 
 app.get('/', function (req,res,next){
-//   if (){
-    //check user cookies
-    //if sessionID in cookie is valid
-      //redirect to index.html
-
-},
-function(req, res) {    //redirect to login.html if invalid
- res.render('login');
+  console.log("session:", req.session);
+  if(req.session) {
+    var userName = req.session.user;
+    new User({username:userName}).fetch().then(function(found){
+      if (found){
+        console.log('session exists, user found',userName, found)
+        res.render('links');
+      }else{
+        console.log("session exists, but user not found");
+        res.render('login');
+      }
+    })
+  }
+  else {
+    res.render('login');
+  }
 });
 
 app.get('/create',
@@ -51,39 +59,49 @@ function(req, res) {
 app.post('/login', function(req, res){
   var username = req.body.username;
   bcrypt.hash(req.body.password, null, null, function(err,hPass){
+    console.log('hpass',hPass)
     new User({username: username, password: hPass}).fetch().then(function(found) {
     if (found) {
       console.log("user found", hPass);
-      res.render('index');
+      req.session.regenerate(function(err){
+        console.log("sessionID saved");
+        req.session.user = username;
+        //load their data
+        res.render('links');
+      })
+      // res.render('index');
       //create sessionID and cookie
+
     } else {
       res.render('signup');
     }
   });
  });
 });
-                //process login, get session cookie, check if existing session..
-                     //check if existing user, redirect to sign-up or authenticate
-                        //capture username from req
-                        //convert password into hash and query user table with this value
-
 
 app.post('/signup', function(req, res){
- new User({username: req.user.username, password: req.user.password}).fetch().then(function(found) {
+ var username = req.body.username;
+ bcrypt.hash(req.body.password, null, null, function(err,hPass){
+   new User({username: req.body.username, password: hPass}).fetch().then(function(found) {
     if (found) {
-      res.render('login');
+      res.render('links');
     } else {
         var user = new User({
-          username: req.user.username,
-          password: req.user.password,
+          username: req.body.username,
+          password: hPass,
         });
         user.save().then(function(newUser) {
           Users.add(newUser);
-          res.render('index');
+          res.render('links');
+          req.session.regenerate(function(err){
+            console.log("sessionID saved");
+            req.session.user = username;
         });
-      };
-  })
+      });
+  }
 });
+})
+})
 
 app.post('/links',
 function(req, res) {
