@@ -26,14 +26,26 @@ app.use(morgan('dev'));
 app.use(express.static(__dirname + '/public'));
 app.use(session({secret:'HarishRebecca'}));
 
+
+var FBlogin = false;
 app.get('/', function (req,res,next){
-  //console.log("session:", req.sessionID);
-  if(req.session.user) {
+  console.log('redirected to /!')
+  console.log("fBlogin", FBlogin);
+ if(req.session.user || FBlogin) {
+   console.log("one level in");
     res.render('index');
   } else{
-    res.render('login');
+   res.render('login');
   }
 })
+
+
+app.get('/facebook',
+    function(req,res){
+      console.log('/facebook')
+       FBlogin = true;
+      res.redirect('/');
+ });
 
 app.get('/create',
 function(req, res) {
@@ -67,7 +79,7 @@ app.post('/login', function(request, response){
             request.session.regenerate(function(err){
                 console.log("sessionID saved");
                 request.session.user = username;
-                response.redirect('/index');
+                response.render('index');
             })
         }
       })
