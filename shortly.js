@@ -27,80 +27,83 @@ app.use(express.static(__dirname + '/public'));
 app.use(session({secret:'HarishRebecca'}));
 
 app.get('/', function (req,res,next){
-  console.log("session:", req.session);
-  if(req.session) {
-    var userName = req.session.user;
-    new User({username:userName}).fetch().then(function(found){
-      if (found){
-        console.log('session exists, user found',userName, found)
-        res.render('links');
-      }else{
-        console.log("session exists, but user not found");
-        res.render('login');
-      }
-    })
-  }
-  else {
+  //console.log("session:", req.sessionID);
+  if(req.session.user) {
+    res.render('index');
+  } else{
     res.render('login');
   }
-});
+})
 
 app.get('/create',
 function(req, res) {
   res.render('index');
 });
+app.get('/logout', function(req,res){
+  req.session.regenerate(function(err){
+    console.log('session regenerated without username');
+    res.redirect('/login')
+  })
 
+});
 app.get('/links',
 function(req, res) {
   Links.reset().fetch().then(function(links) {
     res.send(200, links.models);
   });
 });
-app.post('/login', function(req, res){
-  var username = req.body.username;
-  bcrypt.hash(req.body.password, null, null, function(err,hPass){
-    console.log('hpass',hPass)
-    new User({username: username, password: hPass}).fetch().then(function(found) {
+app.post('/login', function(request, response){
+  var username = request.body.username;
+  console.log(username)
+    new User({username: username}).fetch().then(function(found) {
     if (found) {
-      console.log("user found", hPass);
-      req.session.regenerate(function(err){
-        console.log("sessionID saved");
-        req.session.user = username;
-        //load their data
-        res.render('links');
+      console.log(found);
+      bcrypt.compare(request.body.password, found.password, function(err,res){
+        if(res === false){
+            console.log('user not found');
+            response.redirect('/signup');
+        } else {
+            console.log("user found");
+            request.session.regenerate(function(err){
+                console.log("sessionID saved");
+                request.session.user = username;
+                response.redirect('/index');
+            })
+        }
       })
-      // res.render('index');
-      //create sessionID and cookie
-
     } else {
-      res.render('signup');
+      console.log('user not found');
+      res.redirect('/signup');
     }
   });
  });
-});
 
 app.post('/signup', function(req, res){
  var username = req.body.username;
  bcrypt.hash(req.body.password, null, null, function(err,hPass){
    new User({username: req.body.username, password: hPass}).fetch().then(function(found) {
     if (found) {
-      res.render('links');
+      res.redirect('/index');
     } else {
         var user = new User({
           username: req.body.username,
           password: hPass,
-        });
+      });
         user.save().then(function(newUser) {
           Users.add(newUser);
-          res.render('links');
           req.session.regenerate(function(err){
             console.log("sessionID saved");
             req.session.user = username;
         });
+          res.redirect('/index');
       });
   }
 });
 })
+})
+
+app.get('/signup', function(req, res) {
+  res.render('signup');
 })
 
 app.post('/links',
